@@ -1,4 +1,4 @@
-import { BaseEntity } from "@domains/common/src/typeorm/base_entity";
+import { BaseEntity } from "../../../src/common/typeorm/base_entity";
 import { Entity, Column, BeforeInsert } from "typeorm";
 
 // TODO(felix): bring state and statusReason to be in this table as well
