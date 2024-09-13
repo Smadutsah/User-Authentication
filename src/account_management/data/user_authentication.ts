@@ -2,7 +2,7 @@ import { Entity, Column, BeforeInsert, BeforeUpdate, Index, EntityManager } from
 import { AppDataSource } from '../../data_source';
 import { BaseEntity } from '../../common/typeorm/base_entity';
 import { uuidWithPrefix } from '../../common/utils/uuid';
-import { validateOrReject } from 'class-validator';
+import { validateOrReject, Length } from 'class-validator';
 import { POSTGRESQL_ERROR } from '../../common/constants/postgresql';
 
 /**
@@ -10,7 +10,12 @@ import { POSTGRESQL_ERROR } from '../../common/constants/postgresql';
  */
 @Entity({ name: 'user_authentication_information_verification' })
 @Index('user_authentication_information_verification_unique_idempotency_key', ['idempotencyKey'], { unique: true })
+@Index('user_authentication_information_verification_unique_logical_id', ['logicalId'], {
+  unique: true,
+  where: 'deleted_at IS NULL'
+})
 export class UserAuthenticationInformationVerification extends BaseEntity {
+  
   @Column({ name: 'idempotency_key', type: 'text', unique: true, nullable: false })
   idempotencyKey: string;
 
@@ -21,7 +26,17 @@ export class UserAuthenticationInformationVerification extends BaseEntity {
   type: 'email' | 'phone';
 
   @Column({ name: 'verification_code', type: 'text', nullable: false })
+  @Length(6, 6)
   verificationCode: string;
+
+  @Column({ name: 'logical_id', update: false, nullable: false })
+  logicalId: string;
+
+  @Column({ type: 'timestamptz', name: 'verified_at', nullable: true })
+  verifiedAt?: Date;
+
+  @Column({ type: 'timestamptz', name: 'deleted_at', nullable: true })
+  deletedAt?: Date;
 
   @Column({
     type: 'timestamptz',
@@ -47,6 +62,7 @@ export class UserAuthenticationInformationVerification extends BaseEntity {
     value: string,
     type: 'email' | 'phone',
     verificationCode: string,
+    logicalId: string,
     transactionalEntityManager?: EntityManager
   ): Promise<UserAuthenticationInformationVerification> {
     const verificationInfo = new UserAuthenticationInformationVerification();
@@ -54,6 +70,7 @@ export class UserAuthenticationInformationVerification extends BaseEntity {
     verificationInfo.value = value.trim();
     verificationInfo.type = type;
     verificationInfo.verificationCode = verificationCode.trim();
+    verificationInfo.logicalId = logicalId.trim();
 
     const manager = transactionalEntityManager ?? AppDataSource.manager;
     const insertResult = await manager
@@ -84,3 +101,4 @@ export class UserAuthenticationInformationVerification extends BaseEntity {
     return verificationInfo;
   }
 }
+
